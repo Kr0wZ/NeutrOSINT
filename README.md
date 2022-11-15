@@ -6,11 +6,15 @@ Alternative to [ProtOSINT](https://github.com/pixelbubble/ProtOSINT) since the v
 This tool uses selenium to connect to ProtonMail and checks if email addresses are valid or not.
 
 ---
-### How to use
+# How to use?
 
-Run the main.py file with python3
+### Installation
 
-Usage:
+```bash
+pip install -r requirements.txt
+```
+
+### Usage:
 ```bash
 python3 main.py -u 'USERNAME' -p 'PASSWORD' -f 'FILE_CONTAING_EMAILS.txt' 
 ```
