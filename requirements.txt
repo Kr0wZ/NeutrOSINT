@@ -1,0 +1,6 @@
+webdriver-manager
+selenium
+packaging
+argparse
+colorama
+requests
