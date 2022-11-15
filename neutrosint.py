@@ -204,5 +204,4 @@ class NeutrOSINT():
 		self.login()
 		self.new_email()
 		self.check_emails()
-		#self.extract_timestamp('this_is_just_for_a_video@protonmail.com')
 		self.close()
