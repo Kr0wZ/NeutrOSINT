@@ -17,11 +17,20 @@ sudo apt install ./google-chrome-stable_current_amd64.deb
 ```
 Tested on Ubuntu 20.04.4 LTS x64 and Kali Linux 2021.1 x64
 
+### Prerequisites
+
 ```bash
 pip install -r requirements.txt
 ```
+You must have a valid Protonmail account
+
 
 ### Usage:
 ```bash
+python3 main.py -h
+```
+
+```bash
 python3 main.py -u 'USERNAME' -p 'PASSWORD' -f 'FILE_CONTAING_EMAILS.txt' 
 ```
+
