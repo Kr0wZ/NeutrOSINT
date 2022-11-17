@@ -9,8 +9,8 @@ This tool uses selenium to connect to ProtonMail and checks if email addresses a
 ### What's new?
 This 2.0 version introduces a new 'mode': Light mode.
 
-Thanks to [@Nenaff_](https://twitter.com/Nenaff_), I knew it was possible to request the verification of an email without the use of selenium.
-This is way faster but if you have a lot of email addresses to verify you'll be blocked after 100 requests (don't know precisely how much time but at least more than an hour).
+Thanks to [@Nenaff_](https://twitter.com/Nenaff_), I knew it was possible to request the verification of an email without the use of selenium.<br/>
+This is way faster but if you have a lot of email addresses to verify you'll be blocked after 100 requests (don't know precisely how much time but at least more than an hour).<br/>
 The solution is either to use a proxy to bypass this limitation or use the other mode of NeutrOSINT which uses username and password (but you need to have a valid account - you can create one for free).
 
 
@@ -61,7 +61,7 @@ python3 main.py -u 'USERNAME' -p 'PASSWORD' -f 'FILE_CONTAING_EMAILS.txt'
 ---
 # How does it work?
 
-The light mode calls the Protonmail API at this endpoint: https://account.proton.me/api/users/available
+The light mode calls the Protonmail API at this endpoint: https://account.proton.me/api/users/available <br/>
 Depending on the status code, we can determine if an email address already exists or not.
 
 The selenium mode uses selenium with the given credentials to connect to protonmail, go to 'New Email', then fills in the 'To' field with all the email addresses to check.
