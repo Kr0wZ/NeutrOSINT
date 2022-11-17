@@ -20,6 +20,7 @@ The solution is either to use a proxy to bypass this limitation or use the other
 - API limit with light mode: 100 requests per hour.
 - Free protonmail accounts are limited to 100 entries for 'To' field. But the tool handles this. It just takes a bit more time.
 - If the string 'None' appears in the creation date for valid accounts then it means the API limit is probably reached. Since this is not the same API as for the light mode, here we have only 16 requests per hour.
+- For some obscure reasons, sometimes selenium isn't able to get access to the 'New Email' button. In this case it is recommended to run the script again.
 
 ---
 # How to use?
@@ -56,4 +57,14 @@ Run with selenium by specifying username and password.
 ```bash
 python3 main.py -u 'USERNAME' -p 'PASSWORD' -f 'FILE_CONTAING_EMAILS.txt' 
 ```
+
+---
+# How does it work?
+
+The light mode calls the Protonmail API at this endpoint: https://account.proton.me/api/users/available
+Depending on the status code, we can determine if an email address already exists or not.
+
+The selenium mode uses selenium with the given credentials to connect to protonmail, go to 'New Email', then fills in the 'To' field with all the email addresses to check.
+
+
 
