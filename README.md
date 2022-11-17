@@ -47,6 +47,11 @@ Show help message:
 python3 main.py -h
 ```
 
+Run the light mode using the protonmail API:
+```bash
+python3 main.py -l -e 'EMAIL_TO_VERIFY' 
+```
+
 Run with selenium by specifying username and password.
 ```bash
 python3 main.py -u 'USERNAME' -p 'PASSWORD' -f 'FILE_CONTAING_EMAILS.txt' 
