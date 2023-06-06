@@ -4,3 +4,4 @@ packaging
 argparse
 colorama
 requests
+dnspython

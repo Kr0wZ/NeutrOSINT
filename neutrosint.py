@@ -11,13 +11,10 @@ import time
 import os
 import re
 import requests
+import dns.resolver
 from datetime import datetime
 from colorama import Fore, Style
 
-#Check if the number of emails to verify is greater than 100. In the case where the user uses the light mode, print a message saying that all email addresses won't be able to be tested. Redirect the user
-#to the credentials mode.
-#If the user uses the credentials mode then check if more than 100 email addresses. If yes then automatically remove from the field from 'To' once we reach the limit and do it again until there
-#are no more email addresses to verify
 
 class NeutrOSINT():
 	def __init__(self):
@@ -58,7 +55,7 @@ class NeutrOSINT():
 		try:
 			self.driver = webdriver.Chrome(service=service, options=chrome_options)
 		except:
-			print(Fore.RED + "[-] Error setting up the driver...")
+			print(f"{Fore.RED}[-] Error setting up the driver...\n")
 			exit()
 
 		self.driver.get('https://account.protonmail.com/login')
@@ -91,12 +88,12 @@ class NeutrOSINT():
 			handle.close()
 
 			#Tell the user the API limit will be exceeded
-			if(len(self.emails) < 100):
+			if(len(self.emails) > 100):
 				if(self.light):
-					print(Fore.YELLOW + "[?] Warning! There are more than 100 email addresses to check. The API's limit is 100 requests. All the email addresses won't be tested. You can either use the credentials mode (--username and --password) or use a proxy (--proxy)")
+					print(f"{Fore.YELLOW}[?] Warning! There are more than 100 email addresses to check. The API's limit is 100 requests. All the email addresses won't be tested. You can either use the credentials mode (--username and --password) or use a proxy (--proxy)\n")
 
 		except:
-			print(Fore.RED + "[-] Unable to load emails")
+			print(f"{Fore.RED}[-] Unable to load emails")
 			exit()
 		
 	def write_to_file(self, data):
@@ -105,12 +102,12 @@ class NeutrOSINT():
 			handle.write(data)
 			handle.close()
 		except:
-			print(Fore.RED + "[-] Unable to save data to file")
+			print(f"{Fore.RED}[-] Unable to save data to file")
 			exit()
 
 	def login(self):
 		try:
-			print(Fore.YELLOW + "[?] Connecting to ProtonMail with credentials...")
+			print(f"{Fore.YELLOW}[?] Connecting to ProtonMail with credentials...")
 
 			#Find the username field
 			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.ID, 'username')))
@@ -128,9 +125,9 @@ class NeutrOSINT():
 			#Wait to connect to our account
 			time.sleep(self.time)
 
-			print(Fore.GREEN + "[+] Connected to ProtonMail\n")
+			print(f"{Fore.GREEN}[+] Connected to ProtonMail\n")
 		except:
-			print(Fore.RED + "[-] Error when connecting to ProtonMail...")
+			print(f"{Fore.RED}[-] Error when connecting to ProtonMail...")
 			exit()
 
 	def clear_element(self, method, element_path):
@@ -139,12 +136,12 @@ class NeutrOSINT():
 			element = self.driver.find_element(method, element_path)
 			element.clear()
 		except:
-			print(Fore.RED + "[-] Unable to clear the element")
+			print(f"{Fore.RED}[-] Unable to clear the element")
 			exit()
 
 	def new_email(self):
 		try:
-			print(Fore.YELLOW + "[?] Accessing 'New email' to check email addresses...")
+			print(f"{Fore.YELLOW}[?] Accessing 'New email' to check email addresses...")
 			#Retrieve the "New email" button
 			element = WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//button[@class="button button-large button-solid-norm w100 no-mobile"]')))
 			new_email_element = self.driver.find_element(By.XPATH, '//button[@class="button button-large button-solid-norm w100 no-mobile"]')
@@ -156,7 +153,7 @@ class NeutrOSINT():
 			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div/input')))
 			to_email_element = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div/input')
 
-			print(Fore.YELLOW + "[?] Checking email addresses...\n" + Style.RESET_ALL)
+			print(f"{Fore.YELLOW}[?] Checking email addresses...{Style.RESET_ALL}\n")
 
 			#Create a copy of emails to avoid the modifications
 			tmp_emails_array = self.emails[:]
@@ -189,10 +186,10 @@ class NeutrOSINT():
 
 		except TimeoutException:
 			if(self.max_retries == 1):
-				print(Fore.RED + "[-] Too many retries. Try to launch the script again")
+				print(f"{Fore.RED}[-] Too many retries. Try to launch the script again")
 				exit()
 			self.max_retries = self.max_retries + 1
-			print(Fore.RED + "[-] Unable to access new email to check email addresses. Trying again...")
+			print(f"{Fore.RED}[-] Unable to access new email to check email addresses. Trying again...")
 			self.new_email()
 			
 
@@ -212,6 +209,18 @@ class NeutrOSINT():
 			#print(Fore.RED + "[-] Error! Impossible to retrieve the creation date. Maybe API restriction...")
 			return None
 		
+	def is_syntax_correct(self, email):
+		return re.match('([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+', email)
+
+	def is_proton_domain(self, email):
+		return email.split("@")[1] in ["protonmail.com", "proton.me"]
+
+	def check_domain(self, email):
+		if(not self.is_proton_domain(email)):
+			for data in dns.resolver.query(email.split("@")[1], "MX"):
+				if("protonmail" in data.to_text()):
+					return True
+				
 
 	#Pass emails as argument to use for printing (pass tmp_emails_array)
 	def check_emails(self, emails):
@@ -228,21 +237,38 @@ class NeutrOSINT():
 
 			#Loop over all divs
 			for item in elements_to_loop:
+				if(not self.is_syntax_correct(emails[count])):
+					print(f"{Fore.RED}[-] Invalid format: {Style.RESET_ALL}{emails[count]}")
+					count = count + 1
+					continue
 				#foreach retrieve their classes
 				class_str = item.get_attribute('class')
 				if("invalid" in class_str):
 					if(self.output_file != None):
-						self.write_to_file("Invalid email: " + emails[count] + "\n")
-					print(Fore.RED + "[-] Invalid email: " + Style.RESET_ALL + emails[count])
+						self.write_to_file(f"Proton email does not exist: {emails[count]}\n")
+					print(f"{Fore.RED}[-] Proton email does not exist: {Style.RESET_ALL}{emails[count]}")
 				else:
 					creation_date = self.extract_timestamp(emails[count])
-					if(self.output_file != None):
-						self.write_to_file("Valid email: " + emails[count] + " - Creation date: " + str(creation_date) + "\n")
-					print(Fore.GREEN + "[+] Valid email: " + Style.RESET_ALL + emails[count] + " - Creation date: " + str(creation_date))
+					if(creation_date == None):
+						if(self.output_file != None):
+							self.write_to_file(f"Unknown email: {emails[count]}\n")
+						print(f"{Fore.YELLOW}[?] Unknown email: {Style.RESET_ALL}{emails[count]}")
+						count = count + 1
+						continue
+					else:
+						if(self.check_domain(emails[count])):
+							if(self.output_file != None):
+								self.write_to_file(f"Valid email (business): {emails[count]} - Creation date: {str(creation_date)}\n")
+							print(f"{Fore.GREEN}[+] Valid email (business): {Style.RESET_ALL}{emails[count]} - Creation date: {str(creation_date)}")
+							count = count + 1
+							continue
+						if(self.output_file != None):
+							self.write_to_file(f"Valid email: {emails[count]} - Creation date: {str(creation_date)}\n")
+						print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - Creation date: {str(creation_date)}")
 
 				count = count + 1
 		except UnexpectedAlertPresentException:
-			print(Fore.RED + "[-] Unable to check emails addreses...")
+			print(f"{Fore.RED}[-] Unable to check emails addreses...")
 			exit()
 		except IndexError:
 			pass
@@ -252,31 +278,46 @@ class NeutrOSINT():
 
 	def request_api(self):
 		for email in self.emails:
+			#First check if syntax is correct
+			if(not self.is_syntax_correct(email)):
+				if(self.output_file != None):
+					self.write_to_file(f"Invalid format: {email}\n")
+				print(f"{Fore.RED}[-] Invalid format: {Style.RESET_ALL}{email}")
+				continue
+
 			try:
-				request = requests.get("https://account.proton.me/api/users/available", 
+				request = requests.get("https://account.proton.me/api/core/v4/users/available", 
 					headers={
-						"x-pm-appversion":"web-account@5.0.11.11",
-						"x-pm-locale":"en_US"
+						"x-pm-appversion":"web-account@5.0.31.2",
+						"x-pm-locale":"en_US",
+						"x-pm-uid":"imv4jbrns7fyy5chala7jqqkq72pdiyf",
+						"Cookie":"AUTH-imv4jbrns7fyy5chala7jqqkq72pdiyf=fift7rlzzctq6htl7atkvc2kwl4rxgdl"
 					},
 					params={
 						"Name":email,
 						"ParseDomain":"1"
 					},
+
 					proxies=self.proxy)
 
-				#Return code 429 = API limite exceeded
+				#Return code 429 = API limit exceeded
 				if(request.status_code == 409):
 					creation_date = self.extract_timestamp(email)
 					if(self.output_file != None):
-						self.write_to_file("Valid email: " + email + " - Creation date: " + str(creation_date) + "\n")
-					print(Fore.GREEN + "[+] Valid email: " + Style.RESET_ALL + email + " - Creation date: " + str(creation_date))
+						self.write_to_file(f"Valid email: {email} - Creation date: {str(creation_date)}\n")
+					print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{email} - Creation date: {str(creation_date)}")
 
 				elif(request.status_code == 429):
-					print(Fore.RED + "[-] API requests limit exceeded... Try with the credentials mode (--username and --password) or use a proxy (--proxy)")
+					print(f"{Fore.RED}[-] API requests limit exceeded... Try with the credentials mode (--username and --password) or use a proxy (--proxy)")
 				else:
+					if(self.check_domain(email)):
+						if(self.output_file != None):
+							self.write_to_file(f"Valid proton domain (business), can't check validity: {email}\n")
+						print(f"{Fore.GREEN}[+] Valid proton domain (business), can't check validity: {Style.RESET_ALL}{email}")
+						continue
 					if(self.output_file != None):
-						self.write_to_file("Invalid email: " + email + Style.RESET_ALL + "\n")
-					print(Fore.RED + "[-] Invalid email: " + Style.RESET_ALL + email)
+						self.write_to_file(f"Proton email not exists: {email}\n")
+					print(f"{Fore.RED}[-] Proton email not exists: {Style.RESET_ALL}{email}")
 
 			except:
 				print("Error when requesting the API")
@@ -289,11 +330,12 @@ class NeutrOSINT():
 			#Check if we are running in light mode
 			if(self.light):
 				self.request_api()
+				print(f"\nFor business emails, please use the selenium mode to check the validity (-u/-p).")
 			else:
 				self.setup()
 				self.login()
 				self.new_email()
 				self.close()
 		except KeyboardInterrupt:
-			print(Fore.YELLOW + "[?] Exiting..." + Style.RESET_ALL)
+			print(f"{Fore.YELLOW}[?] Exiting...{Style.RESET_ALL}\n")
 			return

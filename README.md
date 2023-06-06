@@ -7,6 +7,14 @@ This tool uses selenium to connect to ProtonMail and checks if email addresses a
 
 ---
 ### What's new?
+
+##### 06/06/2023:
+  - Protonmail added a new field and a cookie for API requests: "x-pm-uid" and "AUTH-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX". With the tests I've done, these values must be generated one and then can be reused over time.
+  - Added regex to check emails syntax
+  - Business email addresses are now detected both in light mode and with selenium. In light mode it only gives an idea if a domain is a business domain used with protonmail but can't determine if email exists. You must you the selenium version to be sure of that (with username and password).
+  - Changed print format to be more python3 friendly
+
+
 This 2.0 version introduces a new 'mode': Light mode.
 
 Thanks to [@Nenaff_](https://twitter.com/Nenaff_), I knew it was possible to request the verification of an email without the use of selenium.<br/>
