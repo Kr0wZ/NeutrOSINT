@@ -221,6 +221,7 @@ class NeutrOSINT():
 				for data in dns.resolver.query(email.split("@")[1], "MX"):
 					if("protonmail" in data.to_text()):
 						return True
+			return False
 		except dns.resolver.NXDOMAIN:
 			print(f"{Fore.RED}[-] Domain doesn't exist...")
 			exit()
@@ -228,7 +229,6 @@ class NeutrOSINT():
 	#Pass emails as argument to use for printing (pass tmp_emails_array)
 	def check_emails(self, emails):
 		try:
-			#print(Fore.YELLOW + "[?] Checking email addresses...\n" + Style.RESET_ALL)
 			#Retrieve the emails we inserted in the input field
 			element = WebDriverWait(self.driver, 15).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div')))
 			elements_to_loop = self.driver.find_elements(By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div')
@@ -267,13 +267,14 @@ class NeutrOSINT():
 						continue
 				else:
 					creation_date = self.extract_timestamp(emails[count])
-					if(creation_date == None):
+					if(creation_date == None and not self.check_domain(emails[count])):
 						if(self.output_file != None):
 							self.write_to_file(f"Not protonmail address, can't determine validity: {emails[count]}\n")
 						print(f"{Fore.YELLOW}[?] Not protonmail address, can't determine validity: {Style.RESET_ALL}{emails[count]}")
 						count = count + 1
 						continue
 					else:
+						#Check if business domain
 						if(self.check_domain(emails[count])):
 							domain = emails[count].split("@")[1]
 							if(self.output_file != None):
@@ -283,10 +284,18 @@ class NeutrOSINT():
 							print(f"{Fore.YELLOW}[?] Checking catch-all setup...{Style.RESET_ALL}")
 
 							result_email = self.get_catch_all_address(emails[count])
+
+							#If catch-all functionality is enabled
 							if(result_email != None):
-								if(self.output_file != None):
-									self.write_to_file(f"Catch-all configured. Here is the source address: {result_email} - Creation date: {str(creation_date)}\n")
-								print(f"{Fore.GREEN}[+] Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - Creation date: {str(creation_date)}")
+								#If email is already a source address of catch-all configuration
+								if(result_email == True):
+									if(self.output_file != None):
+										self.write_to_file(f"Valid email: {emails[count]} - Creation date: {str(creation_date)}\n")
+									print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - Creation date: {str(creation_date)}")
+								else:
+									if(self.output_file != None):
+										self.write_to_file(f"Catch-all configured. Here is the source address: {result_email} - Creation date: {str(creation_date)}\n")
+									print(f"{Fore.GREEN}[+] Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - Creation date: {str(creation_date)}")
 							else:
 								if(self.output_file != None):
 									self.write_to_file(f"Valid email: {emails[count]} - Creation date: {str(creation_date)}\n")
@@ -294,6 +303,7 @@ class NeutrOSINT():
 							count = count + 1
 							continue
 
+						#Basic protonmail accounts
 						if(self.output_file != None):
 							self.write_to_file(f"Valid email: {emails[count]} - Creation date: {str(creation_date)}\n")
 						print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - Creation date: {str(creation_date)}")
@@ -316,11 +326,18 @@ class NeutrOSINT():
 
 		response = requests.get(built_url)
 
+		if(response.status_code == 2028):
+			print(f"{Fore.RED}[-] Too many requests. Try with a proxy/VPN or wait some time...")
+			exit()
+
 		if(catch_all_trigger in response.text):
 			return None
 		else:
 			source_email = response.text.split("uid:")[1].split(" ")[0]
-			return source_email
+			if(source_email == email):
+				return True
+			else:
+				return source_email
 
 	def generate_auth_cookie(self):
 		url_session = "https://account.proton.me/api/auth/v4/sessions"
@@ -390,13 +407,19 @@ class NeutrOSINT():
 
 					proxies=self.proxy)
 
-				#Return code 429 = API limit exceeded
-				if(request.status_code == 409):
+				#Detected as valid but no suggestion means it doesn't exist
+				if('"Suggestions":[]' in request.text):
+					if(self.output_file != None):
+						self.write_to_file(f"Proton email not exists: {email}\n")
+					print(f"{Fore.RED}[-] Proton email not exists: {Style.RESET_ALL}{email}")
+
+				elif(request.status_code == 409):
 					creation_date = self.extract_timestamp(email)
 					if(self.output_file != None):
 						self.write_to_file(f"Valid email: {email} - Creation date: {str(creation_date)}\n")
 					print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{email} - Creation date: {str(creation_date)}")
 
+				#Return code 429 = API limit exceeded
 				elif(request.status_code == 429):
 					print(f"{Fore.RED}[-] API requests limit exceeded... Try with the credentials mode (--username and --password) or use a proxy (--proxy)")
 				else:
@@ -404,15 +427,21 @@ class NeutrOSINT():
 						result_email = self.get_catch_all_address(email)
 						if(result_email != None):
 							creation_date = self.extract_timestamp(email)
-							if(self.output_file != None):
-								self.write_to_file(f"Business protonmail domain. Catch-all configured. Here is the source address: {result_email} - Creation date: {str(creation_date)}\n")
-							print(f"{Fore.GREEN}[+] Business protonmail domain. Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - Creation date: {str(creation_date)}")
+							if(result_email == True):
+								if(self.output_file != None):
+									self.write_to_file(f"Valid email (custom domain): {email} - Creation date: {str(creation_date)}\n")
+								print(f"{Fore.GREEN}[+] Valid email (custom domain): {Style.RESET_ALL}{email} - Creation date: {str(creation_date)}")
+							else:
+								if(self.output_file != None):
+									self.write_to_file(f"Business protonmail domain. Catch-all configured. Here is the source address: {result_email} - Creation date: {str(creation_date)}\n")
+								print(f"{Fore.GREEN}[+] Business protonmail domain. Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - Creation date: {str(creation_date)}")
 						else:
 							if(self.output_file != None):
 								self.write_to_file(f"Valid proton domain (business), can't check validity of email: {email}\n")
 							print(f"{Fore.GREEN}[+] Valid proton domain (business), can't check validity of email: {Style.RESET_ALL}{email}")
 						
 						continue
+
 					if(self.output_file != None):
 						self.write_to_file(f"Proton email not exists: {email}\n")
 					print(f"{Fore.RED}[-] Proton email not exists: {Style.RESET_ALL}{email}")
