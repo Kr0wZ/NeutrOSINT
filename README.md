@@ -1,12 +1,17 @@
 # NeutrOSINT
-Determine if an email address exists or not on ProtonMail with NeutrOSINT
+Determine if an email address exists or not on ProtonMail with NeutrOSINT without alerting the target.
 
 Alternative to [ProtOSINT](https://github.com/pixelbubble/ProtOSINT) since the validation using the API doesn't work anymore.
 
 This tool uses selenium to connect to ProtonMail and checks if email addresses are valid or not.
+The "light" mode is faster and only uses the API to determine the validity of a Protonmail email address. No need to have a Protonmail account.
 
 ---
 ### What's new?
+
+##### 08/06/2023:
+  - "x-pm-uid" is in fact valid for 24 hours. It must be generated again to perform requests. This is now fixed and every requests generate a new AUTH cookie to perform searches.
+  - @OSINT_Tactical found that it was possible to determine the source address of a protonmail business domain if the catch-all functionnality is enabled for this domain. I implemented that in the code.
 
 ##### 06/06/2023:
   - Protonmail added a new field and a cookie for API requests: "x-pm-uid" and "AUTH-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX". With the tests I've done, these values must be generated one and then can be reused over time.
@@ -47,7 +52,8 @@ Tested on Ubuntu 20.04.4 LTS x64 and Kali Linux 2021.1 x64
 ```bash
 pip install -r requirements.txt
 ```
-You must have a valid Protonmail account
+You must have a valid Protonmail account to use the selenium mode.
+But you can also you the light mode (-l) which uses the Protonmail API without the need to create a Protonmail account.
 
 
 ### Usage:
@@ -73,6 +79,3 @@ The light mode calls the Protonmail API at this endpoint: https://account.proton
 Depending on the status code, we can determine if an email address already exists or not.
 
 The selenium mode uses selenium with the given credentials to connect to protonmail, go to 'New Email', then fills in the 'To' field with all the email addresses to check.
-
-
-
