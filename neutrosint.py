@@ -250,6 +250,8 @@ class NeutrOSINT():
 				#foreach retrieve their classes
 				class_str = item.get_attribute('class')
 
+				print()
+
 				if("invalid" in class_str):
 					if(self.output_file != None):
 						self.write_to_file(f"Proton email does not exist: {emails[count]}\n")
@@ -262,6 +264,7 @@ class NeutrOSINT():
 							self.write_to_file(f"Valid business domain: {domain}, catch-all is not configured\n")
 						print(f"{Fore.GREEN}[+] Valid business domain: {Style.RESET_ALL}{domain}, {Fore.RED}catch-all is not configured{Style.RESET_ALL}")
 						count = count + 1
+						continue
 				else:
 					creation_date = self.extract_timestamp(emails[count])
 					if(creation_date == None):
@@ -284,7 +287,10 @@ class NeutrOSINT():
 								if(self.output_file != None):
 									self.write_to_file(f"Catch-all configured. Here is the source address: {result_email} - Creation date: {str(creation_date)}\n")
 								print(f"{Fore.GREEN}[+] Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - Creation date: {str(creation_date)}")
-
+							else:
+								if(self.output_file != None):
+									self.write_to_file(f"Valid email: {emails[count]} - Creation date: {str(creation_date)}\n")
+								print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - Creation date: {str(creation_date)}")
 							count = count + 1
 							continue
 
@@ -405,7 +411,6 @@ class NeutrOSINT():
 							if(self.output_file != None):
 								self.write_to_file(f"Valid proton domain (business), can't check validity of email: {email}\n")
 							print(f"{Fore.GREEN}[+] Valid proton domain (business), can't check validity of email: {Style.RESET_ALL}{email}")
-							print(f"\nFor business emails, please use the selenium mode to check the validity (-u/-p).")
 						
 						continue
 					if(self.output_file != None):
@@ -423,7 +428,7 @@ class NeutrOSINT():
 			#Check if we are running in light mode
 			if(self.light):
 				self.request_api()
-				
+				print(f"\nFor business emails, please use the selenium mode to check the validity (-u/-p).")				
 			else:
 				self.setup()
 				self.login()
