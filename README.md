@@ -78,4 +78,11 @@ python3 main.py -u 'USERNAME' -p 'PASSWORD' -f 'FILE_CONTAING_EMAILS.txt'
 The light mode calls the Protonmail API at this endpoint: https://account.proton.me/api/users/available <br/>
 Depending on the status code, we can determine if an email address already exists or not.
 
+But since May, 2023 it now needs a valid AUTH token to perform requests to the API. <br>
+This token is generated in the `generate_auth_cookie` function. <br>
+First, request an API access token to https://account.proton.me/api/auth/v4/sessions <br>
+Then, get a valid AUTH cookie through https://account.proton.me/api/core/v4/auth/cookies <br>
+
 The selenium mode uses selenium with the given credentials to connect to protonmail, go to 'New Email', then fills in the 'To' field with all the email addresses to check.
+
+
