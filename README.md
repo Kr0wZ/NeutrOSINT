@@ -85,4 +85,14 @@ Then, get a valid AUTH cookie through https://account.proton.me/api/core/v4/auth
 
 The selenium mode uses selenium with the given credentials to connect to protonmail, go to 'New Email', then fills in the 'To' field with all the email addresses to check.
 
+---
 
+# Support
+
+Do you want to support me?
+
+You can buy me a coffee here:
+<a href="https://www.buymeacoffee.com/krowz" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" ></a> 
+
+
+Thanks in advance to anyone donating ❤️
