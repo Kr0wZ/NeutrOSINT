@@ -344,7 +344,7 @@ class NeutrOSINT():
 		url_cookies = "https://account.proton.me/api/core/v4/auth/cookies"
 
 		data_session = {
-			"x-pm-appversion":"web-account@5.0.31.3",
+			"x-pm-appversion":"web-account@5.0.153.3",
 			"x-pm-locale":"en_US",
 			"x-enforce-unauthsession":"true"
 		}
@@ -357,7 +357,7 @@ class NeutrOSINT():
 		uid = json_dump['UID']
 
 		data_cookie = {
-			"x-pm-appversion":"web-account@5.0.31.3",
+			"x-pm-appversion":"web-account@5.0.153.3",
 			"x-pm-locale":"en_US",
 			"x-pm-uid":uid,
 			"Authorization":f"Bearer {access_token}"
@@ -395,7 +395,7 @@ class NeutrOSINT():
 				uid, auth_cookie = self.generate_auth_cookie()
 				request = requests.get("https://account.proton.me/api/core/v4/users/available", 
 					headers={
-						"x-pm-appversion":"web-account@5.0.31.3",
+						"x-pm-appversion":"web-account@5.0.153.3",
 						"x-pm-locale":"en_US",
 						"x-pm-uid":uid,
 						"Cookie":auth_cookie
