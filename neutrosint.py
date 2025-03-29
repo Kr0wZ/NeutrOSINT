@@ -16,6 +16,7 @@ import dns.resolver
 from datetime import datetime
 from colorama import Fore, Style
 
+DOMAINS = ["proton.me", "protonmail.com", "pm.me", "protonmail.ch", "passmail.net"]
 
 class NeutrOSINT():
 	def __init__(self):
@@ -62,7 +63,10 @@ class NeutrOSINT():
 		self.driver.get('https://account.protonmail.com/login')
 
 	def set_email(self, email):
-		self.emails = [ email ]
+		if "@" not in email:
+			self.emails = [f"{email}@{domain}" for domain in DOMAINS]
+		else:
+			self.emails = [ email ]
 
 	def set_username(self, username):
 		self.username = username
@@ -84,7 +88,11 @@ class NeutrOSINT():
 			handle = open(file, 'r')
 			lines = handle.read().splitlines()
 			for line in lines:
-				self.emails.append(line)
+				if "@" not in line:
+					for domain in DOMAINS:
+						self.emails.append(f"{line}@{domain}")
+				else:
+					self.emails.append(line)
 
 			handle.close()
 
