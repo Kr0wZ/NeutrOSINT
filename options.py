@@ -29,11 +29,12 @@ class Options:
 		self.args = self.parser.parse_args()
 
 		#If none of these arguments is used
-		if(not "light" in self.args and not ("username" in self.args and "password" in self.args)):
-			self.parser.error("Error! You must specify either the light mode -l/--light or the credentials (-u/--username and -p/--password)")
-
 		if("light" in self.args and ("username" in self.args or "password" in self.args)):
 			self.parser.error("Error! You must specify either the light mode -l/--light or the credentials (-u/--username and -p/--password)")
+
+        #If username is used without password or inversely
+		if ("username" in self.args) ^ ("password" in self.args):
+			self.parser.error("Error! You must specify both username and password.")
 
 		if(not "file" in self.args and not "email" in self.args):
 			self.parser.error("Error! You must specify one of the two options: -f/--file or -e/--email")
@@ -44,11 +45,12 @@ class Options:
 
 	def run(self):
 
-		if("light" in self.args):
-			self.neutrosint.set_light_mode(self.args.light)
-		else:
+		if("username" in self.args and "password" in self.args):
 			self.neutrosint.set_username(self.args.username)
 			self.neutrosint.set_password(self.args.password)
+		else:
+			print("username and password not specified, using light mode...")
+			self.neutrosint.set_light_mode(True)
 
 		if("proxy" in self.args):
 			self.neutrosint.set_proxy(self.args.proxy)
