@@ -28,7 +28,9 @@ class NeutrOSINT():
 		self.output_file = None
 		self.proxy = {}
 		self.light = False
+		self.key = False
 		self.max_retries = 0
+		self.login_url = "https://account.proton.me/mail"
 
 	def banner(self):
 		print("""
@@ -48,20 +50,18 @@ class NeutrOSINT():
 		chrome_options = Options()
 		chrome_options.add_argument("--headless")
 		chrome_options.add_argument('--no-sandbox')
+		#chrome_options.add_argument('--user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36"')
 
 		if(len(self.proxy) != 0):
 			chrome_options.add_argument('--proxy-server=%s' % self.proxy)
 
-		service = Service(ChromeDriverManager().install())
+		self.driver = webdriver.Chrome(options=chrome_options)
 
 		try:
-			self.driver = webdriver.Chrome(service=service, options=chrome_options)
+			self.driver.get(self.login_url)
 		except:
-			print(f"{Fore.RED}[-] Error setting up the driver...\n")
-			exit()
-
-		self.driver.get('https://account.protonmail.com/login')
-
+			print(f"{Fore.YELLOW}[!] Error! Verify the arguments given to the command line...\n{Style.RESET_ALL}")
+	
 	def set_email(self, email):
 		if "@" not in email:
 			self.emails = [f"{email}@{domain}" for domain in DOMAINS]
@@ -79,6 +79,9 @@ class NeutrOSINT():
 
 	def set_proxy(self, proxy):
 		self.proxy = proxy
+
+	def set_key(self, key):
+		self.key = key
 
 	def set_light_mode(self, light):
 		self.light = light
@@ -99,10 +102,10 @@ class NeutrOSINT():
 			#Tell the user the API limit will be exceeded
 			if(len(self.emails) > 100):
 				if(self.light):
-					print(f"{Fore.YELLOW}[?] Warning! There are more than 100 email addresses to check. The API's limit is 100 requests. All the email addresses won't be tested. You can either use the credentials mode (--username and --password) or use a proxy (--proxy)\n")
+					print(f"{Fore.YELLOW}[?] Warning! There are more than 100 email addresses to check. The API's limit is 100 requests. All the email addresses won't be tested. You can either use the credentials mode (--username and --password) or use a proxy (--proxy)\n{Style.RESET_ALL}")
 
 		except:
-			print(f"{Fore.RED}[-] Unable to load emails")
+			print(f"{Fore.RED}[-] Unable to load emails{Style.RESET_ALL}")
 			exit()
 		
 	def write_to_file(self, data):
@@ -111,12 +114,12 @@ class NeutrOSINT():
 			handle.write(data)
 			handle.close()
 		except:
-			print(f"{Fore.RED}[-] Unable to save data to file")
+			print(f"{Fore.RED}[-] Unable to save data to file{Style.RESET_ALL}")
 			exit()
 
 	def login(self):
 		try:
-			print(f"{Fore.YELLOW}[?] Connecting to ProtonMail with credentials...")
+			print(f"{Fore.YELLOW}[?] Connecting to ProtonMail with credentials...{Style.RESET_ALL}")
 
 			#Find the username field
 			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.ID, 'username')))
@@ -129,14 +132,20 @@ class NeutrOSINT():
 			password_element.send_keys(self.password)
 
 			#Submit the form
-			password_element.submit()
+			#password_element.submit()
+			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div[4]/div[1]/main/div[1]/div[2]/form/button')))
+			login_element = self.driver.find_element(By.XPATH,'/html/body/div[1]/div[4]/div[1]/main/div[1]/div[2]/form/button') 
+			login_element.click()
 
 			#Wait to connect to our account
 			time.sleep(self.time)
 
-			print(f"{Fore.GREEN}[+] Connected to ProtonMail\n")
+			# Check if the URL is still the login form. In that case, login failed
+			WebDriverWait(self.driver, self.time).until(EC.url_to_be("https://mail.proton.me/u/0/inbox"))
+
+			print(f"{Fore.GREEN}[+] Connected to ProtonMail\n{Style.RESET_ALL}")
 		except:
-			print(f"{Fore.RED}[-] Error when connecting to ProtonMail...")
+			print(f"{Fore.RED}[-] Error when connecting to ProtonMail...{Style.RESET_ALL}")
 			exit()
 
 	def clear_element(self, method, element_path):
@@ -145,18 +154,17 @@ class NeutrOSINT():
 			element = self.driver.find_element(method, element_path)
 			element.clear()
 		except:
-			print(f"{Fore.RED}[-] Unable to clear the element")
+			print(f"{Fore.RED}[-] Unable to clear the element{Style.RESET_ALL}")
 			exit()
 
 	def new_email(self):
 		try:
-			print(f"{Fore.YELLOW}[?] Accessing 'New email' to check email addresses...")
+			print(f"{Fore.YELLOW}[?] Accessing 'New email' to check email addresses...{Style.RESET_ALL}")
 			#Retrieve the "New email" button
-			element = WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//button[@class="button button-large button-solid-norm w100 no-mobile"]')))
-			new_email_element = self.driver.find_element(By.XPATH, '//button[@class="button button-large button-solid-norm w100 no-mobile"]')
-			new_email_element.click()
+			element = WebDriverWait(self.driver, 30).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div[3]/div/div/div/div[1]/div[2]/button')))
+			new_email_element = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/div/div/div[1]/div[2]/button')
 
-			time.sleep(self.time)
+			new_email_element.click()
 
 			#Retrieve the "To" field to insert emails
 			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div/input')))
@@ -194,34 +202,45 @@ class NeutrOSINT():
 
 		except TimeoutException:
 			if(self.max_retries == 1):
-				print(f"{Fore.RED}[-] Too many retries. Try to launch the script again")
+				print(f"{Fore.RED}[-] Too many retries. Try to launch the script again{Style.RESET_ALL}")
 				exit()
 			self.max_retries = self.max_retries + 1
-			print(f"{Fore.RED}[-] Unable to access new email to check email addresses. Trying again...")
+			print(f"{Fore.RED}[-] Unable to access new email to check email addresses. Trying again...{Style.RESET_ALL}")
 			self.new_email()
-			
 
-
-	def extract_timestamp(self, email):
-
-		#We use requests here because selenium doesn't work???
+	def extract_pgp_key_information(self, email):
 		source_code = requests.get('https://api.protonmail.ch/pks/lookup?op=index&search=' + email)
 
 		try:
-			timestamp = re.sub(':', '', re.search(':[0-9]{10}::', source_code.text).group(0))
-			creation_date = datetime.fromtimestamp(int(timestamp))
+			result = re.search(r'pub:([a-f0-9]+):(?:\d+):(\d+)?:(\d+)::', source_code.text)
+			if(result):
+				fingerprint = result.group(1)
+				if(result.group(2) == "2048"):
+					key_type = "RSA 2048"
+				elif(result.group(2) == "4096"):
+					key_type = "RSA 4096"
+				else:
+					key_type = "ECC Curve25519"
+				timestamp = datetime.fromtimestamp(int(result.group(3)))
 
-			return creation_date
-
+				return fingerprint, key_type, timestamp
 		except AttributeError:
-			#print(Fore.RED + "[-] Error! Impossible to retrieve the creation date. Maybe API restriction...")
+			#print(Fore.RED + "[-] Error! Impossible to retrieve the creation date. Maybe API restriction...{Style.RESET_ALL}")
 			return None
-		
+
+	def format_pgp_key_information(self, fingerprint, key_type, timestamp):
+		return f"PGP key creation date: {str(timestamp)} - Fingerprint: {str(fingerprint)} - Algorithm: {str(key_type)}"
+
+	def get_pgp_public_key(self, email):
+		if(self.key):
+			return requests.get('https://api.protonmail.ch/pks/lookup?op=get&search=' + email).text
+		return ""
+
 	def is_syntax_correct(self, email):
 		return re.match('([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+', email)
 
 	def is_proton_domain(self, email):
-		return email.split("@")[1] in ["protonmail.com", "proton.me"]
+		return email.split("@")[1] in DOMAINS
 
 	def check_domain(self, email):
 		try:
@@ -231,8 +250,11 @@ class NeutrOSINT():
 						return True
 			return False
 		except dns.resolver.NXDOMAIN:
-			print(f"{Fore.RED}[-] Domain doesn't exist...")
-			exit()
+			print(f"{Fore.RED}[-] Domain doesn't exist...{Style.RESET_ALL}")
+			return False
+		except dns.resolver.LifetimeTimeout:
+			print(f"{Fore.RED}[-] DNS timeout error... Please verify your connection{Style.RESET_ALL}")
+			return False
 
 	#Pass emails as argument to use for printing (pass tmp_emails_array)
 	def check_emails(self, emails):
@@ -274,11 +296,17 @@ class NeutrOSINT():
 						count = count + 1
 						continue
 				else:
-					creation_date = self.extract_timestamp(emails[count])
+					try:
+						fingerprint, key_type, creation_date = self.extract_pgp_key_information(emails[count])
+						display = self.format_pgp_key_information(fingerprint, key_type, creation_date)
+					except TypeError:
+						display = "Can't retrieve PGP keys. API limitation reached"
+						creation_date = ""
+
 					if(creation_date == None and not self.check_domain(emails[count])):
 						if(self.output_file != None):
-							self.write_to_file(f"Not protonmail address, can't determine validity: {emails[count]}\n")
-						print(f"{Fore.YELLOW}[?] Not protonmail address, can't determine validity: {Style.RESET_ALL}{emails[count]}")
+							self.write_to_file(f"Not a protonmail address, can't determine validity: {emails[count]}\n")
+						print(f"{Fore.YELLOW}[?] Not a protonmail address, can't determine validity: {Style.RESET_ALL}{emails[count]}")
 						count = count + 1
 						continue
 					else:
@@ -297,28 +325,42 @@ class NeutrOSINT():
 							if(result_email != None):
 								#If email is already a source address of catch-all configuration
 								if(result_email == True):
+									pgp_key = self.get_pgp_public_key(emails[count])
 									if(self.output_file != None):
-										self.write_to_file(f"Valid email: {emails[count]} - Creation date: {str(creation_date)}\n")
-									print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - Creation date: {str(creation_date)}")
+										self.write_to_file(f"Valid email: {emails[count]} - {display}\n")
+										self.write_to_file(f"{pgp_key}\n")
+									print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - {display}{Style.RESET_ALL}")
+									print(pgp_key, end='')
 								else:
+									pgp_key = self.get_pgp_public_key(emails[count])
 									if(self.output_file != None):
-										self.write_to_file(f"Catch-all configured. Here is the source address: {result_email} - Creation date: {str(creation_date)}\n")
-									print(f"{Fore.GREEN}[+] Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - Creation date: {str(creation_date)}")
+										self.write_to_file(f"Catch-all configured. Here is the source address: {result_email} - {display}\n")
+										self.write_to_file(f"{pgp_key}\n")
+									print(f"{Fore.GREEN}[+] Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - {display}{Style.RESET_ALL}")
+									print(pgp_key, end='')
 							else:
+								pgp_key = self.get_pgp_public_key(emails[count])
 								if(self.output_file != None):
-									self.write_to_file(f"Valid email: {emails[count]} - Creation date: {str(creation_date)}\n")
-								print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - Creation date: {str(creation_date)}")
+									self.write_to_file(f"Valid email: {emails[count]} - {display}\n")
+									self.write_to_file(f"{pgp_key}\n")
+								print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - {display}{Style.RESET_ALL}")
+								print(pgp_key, end='')
 							count = count + 1
 							continue
 
+						pgp_key = self.get_pgp_public_key(emails[count])
+
 						#Basic protonmail accounts
 						if(self.output_file != None):
-							self.write_to_file(f"Valid email: {emails[count]} - Creation date: {str(creation_date)}\n")
-						print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - Creation date: {str(creation_date)}")
+							
+							self.write_to_file(f"Valid email: {emails[count]} - {display}\n")
+							self.write_to_file(f"{pgp_key}\n")
+						print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - {display}{Style.RESET_ALL}")
+						print(pgp_key, end='')
 
 				count = count + 1
 		except UnexpectedAlertPresentException:
-			print(f"{Fore.RED}[-] Unable to check emails addreses...")
+			print(f"{Fore.RED}[-] Unable to check emails addreses...{Style.RESET_ALL}")
 			exit()
 		except IndexError:
 			pass
@@ -335,7 +377,7 @@ class NeutrOSINT():
 		response = requests.get(built_url)
 
 		if(response.status_code == 2028):
-			print(f"{Fore.RED}[-] Too many requests. Try with a proxy/VPN or wait some time...")
+			print(f"{Fore.RED}[-] Too many requests. Try with a proxy/VPN or wait some time...{Style.RESET_ALL}")
 			exit()
 
 		if(catch_all_trigger in response.text):
@@ -418,44 +460,71 @@ class NeutrOSINT():
 				#Detected as valid but no suggestion means it doesn't exist
 				if('"Suggestions":[]' in request.text):
 					if(self.output_file != None):
-						self.write_to_file(f"Proton email not exists: {email}\n")
-					print(f"{Fore.RED}[-] Proton email not exists: {Style.RESET_ALL}{email}")
+						self.write_to_file(f"Proton email does not exist: {email}\n")
+					print(f"{Fore.RED}[-] Proton email does not exist: {Style.RESET_ALL}{email}")
 
 				elif(request.status_code == 409):
-					creation_date = self.extract_timestamp(email)
+					pgp_key = self.get_pgp_public_key(email)
+					try:
+						fingerprint, key_type, creation_date = self.extract_pgp_key_information(email)
+						display = self.format_pgp_key_information(fingerprint, key_type, creation_date)
+					except TypeError:
+						display = "Can't retrieve PGP keys. API limit reached"
+
 					if(self.output_file != None):
-						self.write_to_file(f"Valid email: {email} - Creation date: {str(creation_date)}\n")
-					print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{email} - Creation date: {str(creation_date)}")
+						self.write_to_file(f"Valid email: {email} - {display}\n")
+						self.write_to_file(f"{pgp_key}\n")
+
+					print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{email} - {display}{Style.RESET_ALL}")
+					print(pgp_key)
 
 				#Return code 429 = API limit exceeded
 				elif(request.status_code == 429):
-					print(f"{Fore.RED}[-] API requests limit exceeded... Try with the credentials mode (--username and --password) or use a proxy (--proxy)")
+					print(f"{Fore.RED}[-] API requests limit exceeded... Try again with the credentials mode (--username and --password) or use a proxy (--proxy){Style.RESET_ALL}")
 				else:
 					if(self.check_domain(email)):
 						result_email = self.get_catch_all_address(email)
 						if(result_email != None):
-							creation_date = self.extract_timestamp(email)
+							try:
+								fingerprint, key_type, creation_date = self.extract_pgp_key_information(email)
+								display = self.format_pgp_key_information(fingerprint, key_type, creation_date)
+							except TypeError:
+								display = "Can't retrieve PGP keys. API limit reached"
+
 							if(result_email == True):
+								pgp_key = self.get_pgp_public_key(email)
 								if(self.output_file != None):
-									self.write_to_file(f"Valid email (custom domain): {email} - Creation date: {str(creation_date)}\n")
-								print(f"{Fore.GREEN}[+] Valid email (custom domain): {Style.RESET_ALL}{email} - Creation date: {str(creation_date)}")
+									self.write_to_file(f"Valid email (custom domain): {email} - {display}\n")
+									self.write_to_file(f"{pgp_key}\n")
+								print(f"{Fore.GREEN}[+] Valid email (custom domain): {Style.RESET_ALL}{email} - {display}{Style.RESET_ALL}")
+								print(pgp_key)
 							else:
+								pgp_key = self.get_pgp_public_key(email)
 								if(self.output_file != None):
-									self.write_to_file(f"Business protonmail domain. Catch-all configured. Here is the source address: {result_email} - Creation date: {str(creation_date)}\n")
-								print(f"{Fore.GREEN}[+] Business protonmail domain. Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - Creation date: {str(creation_date)}")
+									self.write_to_file(f"Business protonmail domain. Catch-all configured. Here is the source address: {result_email} - {display}\n")
+									self.write_to_file(f"{pgp_key}\n")
+								print(f"{Fore.GREEN}[+] Business protonmail domain. Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - {display}{Style.RESET_ALL}")
+								print(pgp_key)
 						else:
+							pgp_key = self.get_pgp_public_key(email)
 							if(self.output_file != None):
 								self.write_to_file(f"Valid proton domain (business), can't check validity of email: {email}\n")
+								self.write_to_file(f"{pgp_key}\n")
 							print(f"{Fore.GREEN}[+] Valid proton domain (business), can't check validity of email: {Style.RESET_ALL}{email}")
+							print(pgp_key)
 						
 						continue
 
+					pgp_key = self.get_pgp_public_key(email)
+
 					if(self.output_file != None):
-						self.write_to_file(f"Proton email not exists: {email}\n")
-					print(f"{Fore.RED}[-] Proton email not exists: {Style.RESET_ALL}{email}")
+						self.write_to_file(f"Proton email does not exist: {email}\n")
+						self.write_to_file(f"{pgp_key}\n")
+					print(f"{Fore.RED}[-] Proton email does not exist: {Style.RESET_ALL}{email}")
+					print(pgp_key)
 
 			except:
-				print(f"{Fore.RED}[-] Error when requesting the API")
+				print(f"{Fore.RED}[-] Error when requesting the API{Style.RESET_ALL}")
 				exit()
 
 	def run(self):

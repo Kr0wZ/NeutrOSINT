@@ -22,6 +22,7 @@ class Options:
 		exclusive_group_actions.add_argument("-f", "--file", metavar="FILE", type=str, help="Specify containing list of emails to check")
 		exclusive_group_actions.add_argument("-e", "--email", metavar="EMAIL", type=str, help="Check existence of this email")
 
+		self.parser.add_argument("-k", "--key", action="store_true", help="Print the public PGP key for that email account")
 		self.parser.add_argument("-o", "--output", metavar="FILE", type=str, help="File where results are stored")
 		self.parser.add_argument("-P", "--proxy", metavar="IP:PORT", type=str, help="IP:PORT of proxy to make requests. To use Tor, you must have installed it and specify '127.0.0.1:9050' as proxy")
 
@@ -64,6 +65,9 @@ class Options:
 			self.neutrosint.load_emails(self.args.file)
 			if("output" in self.args):
 				self.neutrosint.set_output_file(self.args.output)
+
+		if("key" in self.args):
+			self.neutrosint.set_key(self.args.key)
 
 		self.neutrosint.run()
 

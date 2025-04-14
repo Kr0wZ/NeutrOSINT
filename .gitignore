@@ -9,4 +9,3 @@ venv/
 # Build artifacts
 build/
 *.egg-info/
-
