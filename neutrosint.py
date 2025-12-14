@@ -24,7 +24,7 @@ class NeutrOSINT():
 		self.username = None
 		self.password = None
 		self.emails = []
-		self.time = 16
+		self.time = 30
 		self.output_file = None
 		self.proxy = {}
 		self.light = False
@@ -167,8 +167,8 @@ class NeutrOSINT():
 			new_email_element.click()
 
 			#Retrieve the "To" field to insert emails
-			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div/input')))
-			to_email_element = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div/input')
+			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'input[data-testid="composer:to"]')))
+			to_email_element = self.driver.find_element(By.CSS_SELECTOR, 'input[data-testid="composer:to"]')
 
 			print(f"{Fore.YELLOW}[?] Checking email addresses...{Style.RESET_ALL}\n")
 
@@ -260,105 +260,100 @@ class NeutrOSINT():
 	def check_emails(self, emails):
 		try:
 			#Retrieve the emails we inserted in the input field
-			element = WebDriverWait(self.driver, 15).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div')))
-			elements_to_loop = self.driver.find_elements(By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div')
+			element = WebDriverWait(self.driver, 15).until(EC.presence_of_element_located((By.XPATH, "//div[@data-testid='composer:to-field']//div[contains(@class,'composer-addresses-item')]")))
+			elements_to_loop = self.driver.find_elements(By.XPATH, "//div[@data-testid='composer:to-field']//div[contains(@class,'composer-addresses-item')]")
 
-			#Remove the last div (which is always null)
-			elements_to_loop = elements_to_loop[:-1]
 
-			count = 0
 
 			time.sleep(1)
 
 			#Loop over all divs
 			for item in elements_to_loop:
-				if(not self.is_syntax_correct(emails[count])):
-					print(f"{Fore.RED}[-] Invalid format: {Style.RESET_ALL}{emails[count]}")
-					count = count + 1
+				email_value = item.find_element(By.XPATH, ".//span[@data-testid='composer-addresses-item-label']").text.strip()
+
+				if(not self.is_syntax_correct(email_value)):
+					print(f"{Fore.RED}[-] Invalid format: {Style.RESET_ALL}{email_value}")
 					continue
 
 				#foreach retrieve their classes
 				class_str = item.get_attribute('class')
+				
 
 				print()
 
 				if("invalid" in class_str):
 					if(self.output_file != None):
-						self.write_to_file(f"Proton email does not exist: {emails[count]}\n")
-					print(f"{Fore.RED}[-] Proton email does not exist: {Style.RESET_ALL}{emails[count]}")
+						self.write_to_file(f"Proton email does not exist: {email_value}\n")
+					print(f"{Fore.RED}[-] Proton email does not exist: {Style.RESET_ALL}{email_value}")
 
 					#Check if domain is linked to protonmail
-					if(self.check_domain(emails[count])):
-						domain = emails[count].split("@")[1]
+					if(self.check_domain(email_value)):
+						domain = email_value.split("@")[1]
 						if(self.output_file != None):
 							self.write_to_file(f"Valid business domain: {domain}, catch-all is not configured\n")
 						print(f"{Fore.GREEN}[+] Valid business domain: {Style.RESET_ALL}{domain}, {Fore.RED}catch-all is not configured{Style.RESET_ALL}")
-						count = count + 1
 						continue
 				else:
 					try:
-						fingerprint, key_type, creation_date = self.extract_pgp_key_information(emails[count])
+						fingerprint, key_type, creation_date = self.extract_pgp_key_information(email_value)
 						display = self.format_pgp_key_information(fingerprint, key_type, creation_date)
 					except TypeError:
 						display = "Can't retrieve PGP keys. API limitation reached"
 						creation_date = ""
 
-					if(creation_date == None and not self.check_domain(emails[count])):
+					if(creation_date == None and not self.check_domain(email_value)):
 						if(self.output_file != None):
-							self.write_to_file(f"Not a protonmail address, can't determine validity: {emails[count]}\n")
-						print(f"{Fore.YELLOW}[?] Not a protonmail address, can't determine validity: {Style.RESET_ALL}{emails[count]}")
-						count = count + 1
+							self.write_to_file(f"Not a protonmail address, can't determine validity: {email_value}\n")
+						print(f"{Fore.YELLOW}[?] Not a protonmail address, can't determine validity: {Style.RESET_ALL}{email_value}")
 						continue
 					else:
 						#Check if business domain
-						if(self.check_domain(emails[count])):
-							domain = emails[count].split("@")[1]
+						if(self.check_domain(email_value)):
+							domain = email_value.split("@")[1]
 							if(self.output_file != None):
 								self.write_to_file(f"Valid business domain: {domain}\n")
 							print(f"{Fore.GREEN}[+] Valid business domain: {Style.RESET_ALL}{domain}")
 
 							print(f"{Fore.YELLOW}[?] Checking catch-all setup...{Style.RESET_ALL}")
 
-							result_email = self.get_catch_all_address(emails[count])
+							result_email = self.get_catch_all_address(email_value)
 
 							#If catch-all functionality is enabled
 							if(result_email != None):
 								#If email is already a source address of catch-all configuration
 								if(result_email == True):
-									pgp_key = self.get_pgp_public_key(emails[count])
+									pgp_key = self.get_pgp_public_key(email_value)
 									if(self.output_file != None):
-										self.write_to_file(f"Valid email: {emails[count]} - {display}\n")
+										self.write_to_file(f"Valid email: {email_value} - {display}\n")
 										self.write_to_file(f"{pgp_key}\n")
-									print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - {display}{Style.RESET_ALL}")
+									print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{email_value} - {display}{Style.RESET_ALL}")
 									print(pgp_key, end='')
 								else:
-									pgp_key = self.get_pgp_public_key(emails[count])
+									pgp_key = self.get_pgp_public_key(email_value)
 									if(self.output_file != None):
 										self.write_to_file(f"Catch-all configured. Here is the source address: {result_email} - {display}\n")
 										self.write_to_file(f"{pgp_key}\n")
 									print(f"{Fore.GREEN}[+] Catch-all configured. Here is the source address: {Style.RESET_ALL}{result_email} - {display}{Style.RESET_ALL}")
 									print(pgp_key, end='')
 							else:
-								pgp_key = self.get_pgp_public_key(emails[count])
+								pgp_key = self.get_pgp_public_key(email_value)
 								if(self.output_file != None):
-									self.write_to_file(f"Valid email: {emails[count]} - {display}\n")
+									self.write_to_file(f"Valid email: {email_value} - {display}\n")
 									self.write_to_file(f"{pgp_key}\n")
-								print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - {display}{Style.RESET_ALL}")
+								print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{email_value} - {display}{Style.RESET_ALL}")
 								print(pgp_key, end='')
-							count = count + 1
 							continue
 
-						pgp_key = self.get_pgp_public_key(emails[count])
+						pgp_key = self.get_pgp_public_key(email_value)
 
 						#Basic protonmail accounts
 						if(self.output_file != None):
 							
-							self.write_to_file(f"Valid email: {emails[count]} - {display}\n")
+							self.write_to_file(f"Valid email: {email_value} - {display}\n")
 							self.write_to_file(f"{pgp_key}\n")
-						print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{emails[count]} - {display}{Style.RESET_ALL}")
+						print(f"{Fore.GREEN}[+] Valid email: {Style.RESET_ALL}{email_value} - {display}{Style.RESET_ALL}")
 						print(pgp_key, end='')
 
-				count = count + 1
 		except UnexpectedAlertPresentException:
 			print(f"{Fore.RED}[-] Unable to check emails addreses...{Style.RESET_ALL}")
 			exit()
